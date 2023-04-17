@@ -1,0 +1,206 @@
+name: a test
+on:
+  workflow_dispatch:
+    inputs:
+      url:
+        description: "[网址,必须去掉https://和结尾的/]"
+        required: true
+      name:
+        description: "[名称]"
+        required: true
+      url1:
+        description: "[网址,必须去掉https://和结尾的/]"
+        required: true
+      name1:
+        description: "[名称]"
+        required: true
+      url2:
+        description: "[网址,必须去掉https://和结尾的/]"
+        required: true
+      name2:
+        description: "[名称]"
+        required: true
+        
+     # icon:
+      #  description: "[图标, 可选，默认使用网站的图标]"
+      #  required: false
+      height:
+        description: "[高度, 选填]"
+        required: false
+        default: "780"
+      width:
+        description: "[宽度, 选填]"
+        required: false
+        default: "1200"
+      transparent:
+        description: "[透明无标题栏, mac更适用]"
+        required: false
+        type: boolean
+        default: true
+      # fullscreen:
+      #   description: "[FullScreen, Optional]"
+      #   required: false
+      #   type: boolean
+      #   default: false
+      multi_arch:
+        description: "[arm架构, 可选，取消为x86]"
+        required: false
+        type: boolean
+        default: true
+      
+
+
+jobs:
+  build:
+    name: macos-latest
+    runs-on: macos-latest
+    strategy:
+      fail-fast: false
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    - name: install node
+      uses: actions/setup-node@v3
+      with:
+        node-version: 18
+
+    - name: Install Rust for macos-latest
+      if: inputs.platform == 'macos-latest'
+      uses: actions-rs/toolchain@master
+      with:
+        toolchain: stable
+        profile: minimal
+        override: true
+        target: x86_64-apple-darwin
+
+    - name: install pake-cli local
+      shell: bash
+      run: |
+        echo "install pake on local"
+        #npm install pake-cli
+        #npm install pake-cli
+        #npm list -g pake-cli --depth=0
+        #npm fund  https://github.com/fenkail-ui/pake-bakup.git
+        npm install git+https:github.com/fenkail-ui/pake-bakup.git
+        #find {{/Users/runner/hostedtoolcache/node/18.15.0/x64/lib/pake-cli/}} \( -name "package.json" -o -name "cli.js" \) -type f -exec sed -i '' 's/universal-apple-darwin/aarch64-apple-darwin/g' {} +
+      
+    - name: rust cache restore
+      uses: actions/cache/restore@v3
+      with:
+        path: |
+          ~/.cargo/bin/
+          ~/.cargo/registry/index/
+          ~/.cargo/registry/cache/
+          ~/.cargo/git/db/
+          node_modules/pake-cli/src-tauri/target/
+        key: ${{ inputs.platform }}-cargo-${{ hashFiles('node_modules/pake-cli/src-tauri/Cargo.lock') }}
+
+    - name: build 1 with pake-cli
+      shell: pwsh
+      if: inputs.url != ''
+      run: |
+        pwsh ./script/build_with_pake_cli.ps1
+      env:
+        URL: ${{ inputs.url }}
+        NAME: ${{ inputs.name }}
+        ICON: https://api.faviconkit.com/${{ inputs.url }}/144
+        HEIGHT: ${{ inputs.height }}
+        WIDTH: ${{ inputs.width }}
+        TRANSPARENT: ${{ inputs.transparent }}
+        FULLSCREEN: ${{ inputs.fullscreen }}
+        RESIZE: true
+        MULTI_ARCH: ${{ inputs.multi_arch }}
+        TARGETS: ${{ inputs.targets }}
+      
+    - name: mv file 1
+      if: inputs.multi_arch
+      run: |
+         cp /Users/runner/work/Pake/Pake/node_modules/pake-cli/src-tauri/target/aarch64-apple-darwin/release/bundle/dmg/*.dmg /Users/runner/work/Pake/Pake/node_modules/pake-cli/output
+   
+        
+    - name: build 2 with pake-cli 
+      shell: pwsh
+      if: inputs.url1 != ''
+      run: |
+        pwsh ./script/build_with_pake_cli.ps1
+      env:
+        URL: ${{ inputs.url1 }}
+        NAME: ${{ inputs.name1 }}
+        ICON: https://api.faviconkit.com/${{ inputs.url1 }}/144
+        HEIGHT: ${{ inputs.height }}
+        WIDTH: ${{ inputs.width }}
+        TRANSPARENT: ${{ inputs.transparent }}
+        FULLSCREEN: ${{ inputs.fullscreen }}
+        RESIZE: true
+        MULTI_ARCH: ${{ inputs.multi_arch }}
+        TARGETS: ${{ inputs.targets }}
+        
+    - name: mv file 2
+      if: inputs.multi_arch
+      run: |
+         cp /Users/runner/work/Pake/Pake/node_modules/pake-cli/src-tauri/target/aarch64-apple-darwin/release/bundle/dmg/*.dmg /Users/runner/work/Pake/Pake/node_modules/pake-cli/output
+   
+    - name: build 3 with pake-cli 
+      shell: pwsh
+      if: inputs.url1 != ''
+      run: |
+        pwsh ./script/build_with_pake_cli.ps1
+      env:
+        URL: ${{ inputs.url2 }}
+        NAME: ${{ inputs.name2 }}
+        ICON: https://api.faviconkit.com/${{ inputs.url2 }}/144
+        HEIGHT: ${{ inputs.height }}
+        WIDTH: ${{ inputs.width }}
+        TRANSPARENT: ${{ inputs.transparent }}
+        FULLSCREEN: ${{ inputs.fullscreen }}
+        RESIZE: true
+        MULTI_ARCH: ${{ inputs.multi_arch }}
+        TARGETS: ${{ inputs.targets }}
+        
+    - name: mv file 3
+      if: inputs.multi_arch
+      run: |
+         cp /Users/runner/work/Pake/Pake/node_modules/pake-cli/src-tauri/target/aarch64-apple-darwin/release/bundle/dmg/*.dmg /Users/runner/work/Pake/Pake/node_modules/pake-cli/output
+   
+    - name: Create release
+      id: release
+      uses: ncipollo/release-action@v1
+      with:
+        name: ${{ inputs.name }}+${{ inputs.name1 }}+${{ inputs.name2 }}-macos-latest
+        allowUpdates: true
+        tag: ${{ env.version }}
+        commit: main
+        token: ${{ secrets.RELEASES_TOKEN }}
+        body: |
+          ${{ inputs.name }}
+          ${{ inputs.name1 }}
+          ${{ inputs.name2 }}
+        artifacts: "/Users/runner/work/Pake/Pake/node_modules/pake-cli/src-tauri/target/aarch64-apple-darwin/release/bundle/dmg/*.dmg"   
+   
+    - name: Remove old Releases
+      uses: dev-drprasad/delete-older-releases@v0.1.0
+      with:
+        keep_latest: 3
+        delete_tags: true
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+   
+    - name: Upload archive
+      uses: actions/upload-artifact@v3
+      with:
+        name: ${{ inputs.name }}+${{ inputs.name1 }}+${{ inputs.name2 }}-macos-latest.zip
+        path: node_modules/pake-cli/output/*
+        retention-days: 3
+
+    - name: rust cache store
+      uses: actions/cache/save@v3
+      with:
+        path: |
+          ~/.cargo/bin/
+          ~/.cargo/registry/index/
+          ~/.cargo/registry/cache/
+          ~/.cargo/git/db/
+          node_modules/pake-cli/src-tauri/target/
+        key: ${{ inputs.platform }}-cargo-${{ hashFiles('node_modules/pake-cli/src-tauri/Cargo.lock') }}
