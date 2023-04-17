@@ -1878,7 +1878,7 @@ var build = {
 var CommonConf = {
 	"package": {
 	productName: "WeRead",
-	version: "1.0.0"
+	version: "1.3.0"
 },
 	tauri: tauri$3,
 	build: build
